@@ -1,2 +1,3 @@
 # SkipLinkedList-Java
-<img width="1308" height="513" alt="image" src="https://github.com/user-attachments/assets/557ddbfc-20c3-425d-8ff9-2764786129be" />
+<img width="1308" height="557" alt="image" src="https://github.com/user-attachments/assets/6acfc91c-5494-457c-b766-b08954a10698" />
+
