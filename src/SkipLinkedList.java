@@ -64,7 +64,7 @@ public class SkipLinkedList<K, V> {
         }
 
         public boolean hasPrev() {
-            return currentNode.prevNode != headNode;
+            return currentNode != headNode;
         }
 
         public K getKey() {
@@ -90,7 +90,7 @@ public class SkipLinkedList<K, V> {
         this.cmp = cmp;
     }
 
-    public void insert(K key, V value) {
+    public void put(K key, V value) {
         if (headNode == null || tailNode == null)
             initHeadAndTailNode();
         insertAction(key, value);
@@ -119,6 +119,10 @@ public class SkipLinkedList<K, V> {
 
     public int size() {
         return nodeCount;
+    }
+
+    public int getCurrentMaxLevel() {
+        return currentMaxLevel;
     }
 
     private void initHeadAndTailNode() {
@@ -153,8 +157,10 @@ public class SkipLinkedList<K, V> {
             SkipLinkedListNode<K, V> node = needUpdateStack.pop();
             newNode.levelRefList[countVar] = node.levelRefList[countVar];
             node.levelRefList[countVar] = newNode;
-            if (countVar == 0)
+            if (countVar == 0) {
                 newNode.prevNode = node;
+                newNode.levelRefList[0].prevNode = newNode;
+            }
             ++countVar;
         }
         currentMaxLevel = maxLevel;
@@ -193,13 +199,17 @@ public class SkipLinkedList<K, V> {
             SkipLinkedListNode<K, V> nextNode = node.levelRefList[countVar];
             SkipLinkedListNode<K, V> nextNextNode = nextNode.levelRefList[countVar];
             node.levelRefList[countVar] = nextNextNode;
+            if (countVar == 0 && nextNextNode != null)
+                nextNextNode.prevNode = node;
             nextNode.levelRefList[countVar] = null;
             if (countVar == 0)
                 nextNode.prevNode = null;
             ++countVar;
         }
-        if (countVar > 0)
-            --nodeCount;
+        if (countVar == 0)
+            return;
+        --nodeCount;
+        currentMaxLevel = getLastLevel();
     }
 
     private static int generateRandomLevel() {
@@ -207,5 +217,14 @@ public class SkipLinkedList<K, V> {
         while (ThreadLocalRandom.current().nextInt(16) < 4 && level < MAX_LEVEL_LIMIT)
             level += 1;
         return level;
+    }
+
+    private int getLastLevel() {
+        if (currentMaxLevel == 1)
+            return 1;
+        int lastLevel = currentMaxLevel;
+        while (headNode.levelRefList[lastLevel - 1] == tailNode)
+            --lastLevel;
+        return lastLevel;
     }
 }
