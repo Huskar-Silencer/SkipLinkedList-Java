@@ -1,3 +1,5 @@
+import java.util.Iterator;
+
 public class Main {
     public static void main(String[] args) {
         SkipLinkedList<Integer, String> skipLinkedList = new SkipLinkedList<>((a, b) -> a - b);
@@ -7,16 +9,16 @@ public class Main {
         skipLinkedList.put(4, "four");
         skipLinkedList.put(5, "five");
 
-        System.out.println(skipLinkedList.getValue(3)); // Output: three
-        System.out.println(skipLinkedList.getValue(6)); // Output: null
-        System.out.println(skipLinkedList.getValue(2)); // Output: two
+        System.out.println(skipLinkedList.get(3)); // Output: three
+        System.out.println(skipLinkedList.get(6)); // Output: null
+        System.out.println(skipLinkedList.get(2)); // Output: two
         skipLinkedList.remove(2);
-        System.out.println(skipLinkedList.getValue(2)); // Output: null
+        System.out.println(skipLinkedList.get(2)); // Output: null
 
-        SkipLinkedList.SkipLinkedListIterator<Integer, String> iterator = skipLinkedList.iterator();
+        Iterator<SkipLinkedList.Entry<Integer, String>> iterator = skipLinkedList.iterator();
         while (iterator.hasNext()) {
-            System.out.println(iterator.getKey() + ": " + iterator.getValue());
-            iterator.next();
+            var res = iterator.next();
+            System.out.println(res.getKey() + ": " + res.getValue());
         }
 
         System.out.println(skipLinkedList.getCurrentMaxLevel()); // Output: 3

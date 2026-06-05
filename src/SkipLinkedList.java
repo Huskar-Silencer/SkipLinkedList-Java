@@ -1,8 +1,9 @@
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.Stack;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class SkipLinkedList<K, V> {
+public class SkipLinkedList<K, V> implements Iterable<SkipLinkedList.Entry<K, V>> {
 
     public static class Entry<K, V> {
         private K key;
@@ -36,44 +37,34 @@ public class SkipLinkedList<K, V> {
         }
     }
 
-    public static class SkipLinkedListIterator<K, V> {
-        private SkipLinkedListNode<K, V> currentNode;
-        private SkipLinkedListNode<K, V> headNode;
-        private SkipLinkedListNode<K, V> tailNode;
+    @Override
+    public Iterator<SkipLinkedList.Entry<K, V>> iterator() {
+        return new Iterator<SkipLinkedList.Entry<K, V>>() {
 
-        public SkipLinkedListIterator(SkipLinkedListNode<K, V> headNode, SkipLinkedListNode<K, V> tailNode) {
-            this.headNode = headNode;
-            this.tailNode = tailNode;
-            this.currentNode = headNode;
-        }
+            private SkipLinkedListNode<K, V> current = headNode.levelRefList[0];
 
-        public void next() {
-            if (!hasNext())
-                return;
-            currentNode = currentNode.levelRefList[0];
-        }
+            @Override
+            public boolean hasNext() {
+                return current != tailNode;
+            }
 
-        public void prev() {
-            if (!hasPrev())
-                return;
-            currentNode = currentNode.prevNode;
-        }
+            @Override
+            public SkipLinkedList.Entry<K, V> next() {
+                Entry<K, V> entry = new Entry<>(current.key, current.value);
+                current = current.levelRefList[0];
+                return entry;
+            }
 
-        public boolean hasNext() {
-            return currentNode.levelRefList[0] != tailNode;
-        }
+            public boolean hasPrev() {
+                return current != headNode;
+            }
 
-        public boolean hasPrev() {
-            return currentNode != headNode;
-        }
-
-        public K getKey() {
-            return currentNode.key;
-        }
-
-        public V getValue() {
-            return currentNode.value;
-        }
+            public SkipLinkedList.Entry<K, V> prev() {
+                Entry<K, V> entry = new Entry<>(current.key, current.value);
+                current = current.prevNode;
+                return entry;
+            }
+        };
     }
 
     private SkipLinkedListNode<K, V> headNode;
@@ -96,7 +87,7 @@ public class SkipLinkedList<K, V> {
         insertAction(key, value);
     }
 
-    public V getValue(K key) {
+    public V get(K key) {
         var entry = searchAction(key);
         return entry == null ? null : entry.getValue();
     }
@@ -111,10 +102,6 @@ public class SkipLinkedList<K, V> {
 
     public boolean contains(K key) {
         return searchAction(key) != null;
-    }
-
-    public SkipLinkedListIterator<K, V> iterator() {
-        return new SkipLinkedListIterator<>(headNode, tailNode);
     }
 
     public int size() {
@@ -140,7 +127,7 @@ public class SkipLinkedList<K, V> {
         Stack<SkipLinkedListNode<K, V>> needUpdateStack = new Stack<>();
         for (int i = maxLevel - 1; i >= 0; --i) {
             SkipLinkedListNode<K, V> nextNode = cursor.levelRefList[i];
-            while (nextNode != tailNode && cmp.compare(key, nextNode.key) < 0) {
+            while (nextNode != tailNode && cmp.compare(key, nextNode.key) > 0) {
                 cursor = nextNode;
                 nextNode = cursor.levelRefList[i];
             }
@@ -155,11 +142,12 @@ public class SkipLinkedList<K, V> {
         int countVar = 0;
         while (!needUpdateStack.empty()) {
             SkipLinkedListNode<K, V> node = needUpdateStack.pop();
-            newNode.levelRefList[countVar] = node.levelRefList[countVar];
+            SkipLinkedListNode<K, V> nextNode = node.levelRefList[countVar];
+            newNode.levelRefList[countVar] = nextNode;
             node.levelRefList[countVar] = newNode;
             if (countVar == 0) {
                 newNode.prevNode = node;
-                newNode.levelRefList[0].prevNode = newNode;
+                nextNode.prevNode = newNode;
             }
             ++countVar;
         }
@@ -169,11 +157,11 @@ public class SkipLinkedList<K, V> {
 
     private Entry<K, V> searchAction(K key) {
         SkipLinkedListNode<K, V> cursor = headNode;
-        for (int i = currentMaxLevel; i >= 1; --i) {
-            SkipLinkedListNode<K, V> nextNode = cursor.levelRefList[i - 1];
-            while (nextNode != tailNode && cmp.compare(key, nextNode.key) < 0) {
+        for (int i = currentMaxLevel - 1; i >= 0; --i) {
+            SkipLinkedListNode<K, V> nextNode = cursor.levelRefList[i];
+            while (nextNode != tailNode && cmp.compare(key, nextNode.key) > 0) {
                 cursor = nextNode;
-                nextNode = cursor.levelRefList[i - 1];
+                nextNode = cursor.levelRefList[i];
             }
             if (nextNode != tailNode && cmp.compare(key, nextNode.key) == 0)
                 return new Entry<>(key, nextNode.value);
@@ -186,7 +174,7 @@ public class SkipLinkedList<K, V> {
         Stack<SkipLinkedListNode<K, V>> needUpdateStack = new Stack<>();
         for (int i = currentMaxLevel - 1; i >= 0; --i) {
             SkipLinkedListNode<K, V> nextNode = cursor.levelRefList[i];
-            while (nextNode != tailNode && cmp.compare(key, nextNode.key) < 0) {
+            while (nextNode != tailNode && cmp.compare(key, nextNode.key) > 0) {
                 cursor = nextNode;
                 nextNode = cursor.levelRefList[i];
             }
@@ -209,22 +197,22 @@ public class SkipLinkedList<K, V> {
         if (countVar == 0)
             return;
         --nodeCount;
-        currentMaxLevel = getLastLevel();
+        currentMaxLevel = getLastMaxLevel();
     }
 
     private static int generateRandomLevel() {
         int level = 1;
-        while (ThreadLocalRandom.current().nextInt(16) < 4 && level < MAX_LEVEL_LIMIT)
+        while (ThreadLocalRandom.current().nextInt(4) == 0 && level < MAX_LEVEL_LIMIT)
             level += 1;
         return level;
     }
 
-    private int getLastLevel() {
+    private int getLastMaxLevel() {
         if (currentMaxLevel == 1)
             return 1;
-        int lastLevel = currentMaxLevel;
-        while (headNode.levelRefList[lastLevel - 1] == tailNode)
-            --lastLevel;
-        return lastLevel;
+        int lastMaxLevel = currentMaxLevel;
+        while (lastMaxLevel > 1 && headNode.levelRefList[lastMaxLevel - 1] == tailNode)
+            --lastMaxLevel;
+        return lastMaxLevel;
     }
 }
