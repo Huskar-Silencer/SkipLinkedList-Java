@@ -5,22 +5,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class SkipLinkedList<K, V> implements Iterable<SkipLinkedList.Entry<K, V>> {
 
-    public static class Entry<K, V> {
-        private K key;
-        private V value;
-
-        public Entry(K key, V value) {
-            this.key = key;
-            this.value = value;
-        }
-
-        public K getKey() {
-            return key;
-        }
-
-        public V getValue() {
-            return value;
-        }
+    public record Entry<K, V>(K key, V value) {
     }
 
     private static class SkipLinkedListNode<K, V> {
@@ -41,27 +26,17 @@ public class SkipLinkedList<K, V> implements Iterable<SkipLinkedList.Entry<K, V>
     public Iterator<SkipLinkedList.Entry<K, V>> iterator() {
         return new Iterator<SkipLinkedList.Entry<K, V>>() {
 
-            private SkipLinkedListNode<K, V> current = headNode.levelRefList[0];
+            private SkipLinkedListNode<K, V> current = headNode != null ? headNode.levelRefList[0] : null;
 
             @Override
             public boolean hasNext() {
-                return current != tailNode;
+                return current != null && current != tailNode;
             }
 
             @Override
             public SkipLinkedList.Entry<K, V> next() {
                 Entry<K, V> entry = new Entry<>(current.key, current.value);
                 current = current.levelRefList[0];
-                return entry;
-            }
-
-            public boolean hasPrev() {
-                return current != headNode;
-            }
-
-            public SkipLinkedList.Entry<K, V> prev() {
-                Entry<K, V> entry = new Entry<>(current.key, current.value);
-                current = current.prevNode;
                 return entry;
             }
         };
@@ -71,9 +46,9 @@ public class SkipLinkedList<K, V> implements Iterable<SkipLinkedList.Entry<K, V>
     private SkipLinkedListNode<K, V> tailNode;
     private int currentMaxLevel = 1;
     private int nodeCount = 0;
-    private Comparator<K> cmp;
+    private final Comparator<K> cmp;
 
-    private static int MAX_LEVEL_LIMIT = 32;
+    private static final int MAX_LEVEL_LIMIT = 32;
 
     public SkipLinkedList(Comparator<K> cmp) {
         if (cmp == null)
@@ -89,7 +64,7 @@ public class SkipLinkedList<K, V> implements Iterable<SkipLinkedList.Entry<K, V>
 
     public V get(K key) {
         var entry = searchAction(key);
-        return entry == null ? null : entry.getValue();
+        return entry == null ? null : entry.value();
     }
 
     public Entry<K, V> getEntry(K key) {
@@ -110,6 +85,17 @@ public class SkipLinkedList<K, V> implements Iterable<SkipLinkedList.Entry<K, V>
 
     public int getCurrentMaxLevel() {
         return currentMaxLevel;
+    }
+
+    public boolean empty() {
+        return nodeCount == 0;
+    }
+
+    public void clear() {
+        nodeCount = 0;
+        currentMaxLevel = 1;
+        headNode = null;
+        tailNode = null;
     }
 
     private void initHeadAndTailNode() {
@@ -156,6 +142,7 @@ public class SkipLinkedList<K, V> implements Iterable<SkipLinkedList.Entry<K, V>
     }
 
     private Entry<K, V> searchAction(K key) {
+        if (nodeCount == 0) return null;
         SkipLinkedListNode<K, V> cursor = headNode;
         for (int i = currentMaxLevel - 1; i >= 0; --i) {
             SkipLinkedListNode<K, V> nextNode = cursor.levelRefList[i];
@@ -170,6 +157,7 @@ public class SkipLinkedList<K, V> implements Iterable<SkipLinkedList.Entry<K, V>
     }
 
     private void removeAction(K key) {
+        if (nodeCount == 0) return;
         SkipLinkedListNode<K, V> cursor = headNode;
         Stack<SkipLinkedListNode<K, V>> needUpdateStack = new Stack<>();
         for (int i = currentMaxLevel - 1; i >= 0; --i) {

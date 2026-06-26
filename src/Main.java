@@ -18,7 +18,7 @@ public class Main {
         Iterator<SkipLinkedList.Entry<Integer, String>> iterator = skipLinkedList.iterator();
         while (iterator.hasNext()) {
             var res = iterator.next();
-            System.out.println(res.getKey() + ": " + res.getValue());
+            System.out.println(res.key() + ": " + res.value());
         }
 
         System.out.println(skipLinkedList.getCurrentMaxLevel()); // Output: 3
